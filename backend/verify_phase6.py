@@ -229,7 +229,7 @@ def run_phase6_verification():
         report["security_approval_enforcement"] = True
 
         # 5b: Token encryption
-        raw_token = "ya29.sample_oauth_refresh_token_very_secret_xyz"
+        raw_token = "offline-test-token-not-a-secret"
         enc = encrypt_secret(raw_token)
         dec = decrypt_secret(enc)
         assert raw_token != enc, "Encrypted token must differ from plaintext"
