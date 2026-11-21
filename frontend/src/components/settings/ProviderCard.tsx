@@ -19,6 +19,7 @@ export interface ProviderData {
   has_api_key: boolean;
   base_url?: string;
   health_status_message?: string;
+  settings_json?: Record<string, any>;
 }
 
 interface ProviderCardProps {
@@ -31,6 +32,13 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onRefresh 
   const [apiKey, setApiKey] = useState("");
   const [isPinging, setIsPinging] = useState(false);
   const [pingMessage, setPingMessage] = useState<string | null>(null);
+  const [modelPath, setModelPath] = useState(
+    provider.settings_json?.model_path || "kling-video/v4.0/image-to-video"
+  );
+  const [prompt, setPrompt] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [generation, setGeneration] = useState<any>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const handlePing = async () => {
     setIsPinging(true);
@@ -59,6 +67,75 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onRefresh 
       onRefresh();
     } catch (err: any) {
       alert(`Failed to save key: ${err.message}`);
+    }
+  };
+
+  const handleToggleActive = async () => {
+    try {
+      await fetchApi(`/providers/${provider.provider_key}`, {
+        method: "PUT",
+        body: JSON.stringify({ is_active: !provider.is_active }),
+      });
+      onRefresh();
+    } catch (err: any) {
+      alert(`Failed to update provider: ${err.message}`);
+    }
+  };
+
+  const handleSaveModel = async () => {
+    try {
+      await fetchApi(`/providers/${provider.provider_key}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          settings_json: { ...(provider.settings_json || {}), model_path: modelPath.trim() },
+        }),
+      });
+      onRefresh();
+    } catch (err: any) {
+      alert(`Failed to save model: ${err.message}`);
+    }
+  };
+
+  const handleGenerate = async () => {
+    if (!imageUrl.trim()) {
+      alert("Enter a publicly reachable image URL for the first frame.");
+      return;
+    }
+    setIsGenerating(true);
+    try {
+      const result = await fetchApi<any>("/higgsfield/generations", {
+        method: "POST",
+        body: JSON.stringify({
+          model_path: modelPath.trim(),
+          operation: "image_to_video",
+          payload: { image_url: imageUrl.trim(), prompt: prompt.trim() || undefined, duration: 5, resolution: "720p" },
+        }),
+      });
+      setGeneration(result);
+    } catch (err: any) {
+      alert(`Higgsfield submission failed: ${err.message}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const refreshGeneration = async () => {
+    if (!generation?.id) return;
+    try {
+      const result = await fetchApi<any>(`/higgsfield/generations/${generation.id}`);
+      setGeneration(result);
+    } catch (err: any) {
+      setPingMessage(`Status check failed: ${err.message}`);
+    }
+  };
+
+  const cancelGeneration = async () => {
+    if (!generation?.id) return;
+    try {
+      const result = await fetchApi<any>(`/higgsfield/generations/${generation.id}/cancel`, { method: "POST" });
+      setGeneration(result);
+    } catch (err: any) {
+      setPingMessage(`Cancellation failed: ${err.message}`);
     }
   };
 
@@ -114,6 +191,33 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onRefresh 
             {provider.base_url}
           </p>
         )}
+        {provider.provider_key === "higgsfield" && (
+          <div className="mt-3 space-y-1.5">
+            <label className="text-[11px] font-semibold text-slate-500">Documented model path</label>
+            <div className="flex gap-2">
+              <Input value={modelPath} onChange={(e) => setModelPath(e.target.value)} />
+              <Button size="sm" variant="outline" onClick={handleSaveModel}>Save</Button>
+            </div>
+            <p className="text-[10px] text-amber-600 dark:text-amber-400">Generation may consume prepaid API balance.</p>
+            <div className="pt-2 border-t border-slate-200 dark:border-studio-800 space-y-2">
+              <label className="text-[11px] font-semibold text-slate-500">Image-to-video test input</label>
+              <Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="Public first-frame image URL" />
+              <Input value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Optional motion prompt" />
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={handleGenerate} isLoading={isGenerating}>Submit billable job</Button>
+                {generation && <Button size="sm" variant="outline" onClick={refreshGeneration}>Refresh status</Button>}
+                {generation && !["completed", "failed", "nsfw", "canceled"].includes(generation.status) && (
+                  <Button size="sm" variant="ghost" onClick={cancelGeneration}>Cancel</Button>
+                )}
+              </div>
+              {generation && (
+                <p className="text-[10px] text-slate-500 break-all">
+                  Status: {generation.status}{generation.output_url ? ` • ${generation.output_url}` : ""}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Action footer */}
@@ -149,6 +253,15 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onRefresh 
               <span className="text-[11px] text-slate-400">Zero-API-Key Local</span>
             )}
 
+            <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleToggleActive}
+              className="text-xs"
+            >
+              {provider.is_active ? "Disable" : "Enable"}
+            </Button>
             <Button
               size="sm"
               variant="outline"
@@ -159,6 +272,7 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onRefresh 
               <Activity className="w-3.5 h-3.5" />
               <span>Ping</span>
             </Button>
+            </div>
           </div>
         )}
       </div>

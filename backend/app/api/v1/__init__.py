@@ -12,6 +12,7 @@ from app.api.v1.subtitles import router as subtitles_router
 from app.api.v1.thumbnails import router as thumbnails_router
 from app.api.v1.youtube import router as youtube_router
 from app.api.v1.automation import router as automation_router
+from app.api.v1.higgsfield import router as higgsfield_router
 
 api_router = APIRouter()
 api_router.include_router(auth_router)
@@ -27,3 +28,4 @@ api_router.include_router(subtitles_router)
 api_router.include_router(thumbnails_router)
 api_router.include_router(youtube_router)
 api_router.include_router(automation_router)
+api_router.include_router(higgsfield_router)
