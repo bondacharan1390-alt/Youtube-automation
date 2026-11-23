@@ -252,3 +252,79 @@ def test_phase7_duplicate_job_retry_cancel_and_upload_safeguards():
         assert "already" in str(exc).lower() or "upload" in str(exc).lower()
     finally:
         db.close()
+
+
+def test_phase7_bilingual_workflow_support():
+    db = SessionLocal()
+    user_model = __import__("app.models.user", fromlist=["User"]).User
+    current_user = db.query(user_model).first()
+
+    # Telugu project workflow
+    proj_te = Project(
+        user_id=current_user.id,
+        title="తెలుగు ఆటోమేషన్ పరీక్ష",
+        topic="తెలుగు సైన్స్ విశేషాలు",
+        language="te",
+        aspect_ratio="9:16",
+        target_resolution="1080p",
+        target_scene_count=3,
+        status="draft",
+        metadata_json={},
+    )
+    db.add(proj_te)
+    db.flush()
+    wf_te = AutomationService.create_workflow(proj_te, current_user.id, {"language": "te"}, db)
+    db.commit()
+
+    assert wf_te.name == "Automation: తెలుగు ఆటోమేషన్ పరీక్ష"
+    exec_te = wf_te.executions[0]
+    assert len(exec_te.tasks) == 13
+    assert exec_te.tasks[0].task_key == "research"
+    assert exec_te.tasks[1].task_key == "script"
+
+    db.close()
+
+
+def test_phase7_task_regeneration_safeguards():
+    db = SessionLocal()
+    user_model = __import__("app.models.user", fromlist=["User"]).User
+    current_user = db.query(user_model).first()
+
+    project = Project(
+        user_id=current_user.id,
+        title="Regeneration Safeguard Test",
+        topic="Testing task regeneration limits",
+        language="en",
+        aspect_ratio="16:9",
+        target_resolution="720p",
+        target_scene_count=2,
+        status="draft",
+        metadata_json={},
+    )
+    db.add(project)
+    db.flush()
+    workflow = AutomationService.create_workflow(project, current_user.id, {}, db)
+    execution = workflow.executions[0]
+    db.commit()
+
+    # Test allowed task regeneration on creative task (script)
+    script_task = next(t for t in execution.tasks if t.task_key == "script")
+    script_task.status = "completed"
+    script_task.output_json = {"title": "Test Script"}
+    db.commit()
+
+    regenerated = AutomationService.regenerate_task(script_task.id, db)
+    assert regenerated.status == "pending"
+    assert regenerated.output_json == {}
+
+    # Test blocked task regeneration on safety tasks (approval, upload, quality_check)
+    for safety_key in ("approval", "upload", "quality_check"):
+        safety_task = next(t for t in execution.tasks if t.task_key == safety_key)
+        try:
+            AutomationService.regenerate_task(safety_task.id, db)
+            assert False, f"Regenerating {safety_key} must be blocked"
+        except ValueError as exc:
+            assert "cannot be regenerated" in str(exc)
+
+    db.close()
+

@@ -698,9 +698,28 @@ class AutomationService:
         db.commit()
 
         try:
-            output = await HardwareTaskQueue.run_sequential(
-                f"{workflow.name}:{task.task_key}",
-                AutomationService.execute_task(task, workflow, project, db),
+            task_timeouts = {
+                "research": 60.0,
+                "script": 90.0,
+                "storyboard": 60.0,
+                "voice": 180.0,
+                "images": 180.0,
+                "subtitles": 120.0,
+                "video": 300.0,
+                "editing": 60.0,
+                "thumbnail": 60.0,
+                "seo_metadata": 60.0,
+                "quality_check": 30.0,
+                "approval": 10.0,
+                "upload": 600.0,
+            }
+            timeout_seconds = task_timeouts.get(task.task_key, 120.0)
+            output = await asyncio.wait_for(
+                HardwareTaskQueue.run_sequential(
+                    f"{workflow.name}:{task.task_key}",
+                    AutomationService.execute_task(task, workflow, project, db),
+                ),
+                timeout=timeout_seconds,
             )
             job.status = "completed"
             job.progress_percentage = 100
