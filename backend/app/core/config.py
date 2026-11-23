@@ -32,4 +32,10 @@ class Settings(BaseSettings):
         "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000",
     ).split(",")
 
+    # Higgsfield REST API (server-side only; credentials are stored encrypted per provider)
+    HIGGSFIELD_API_BASE_URL: str = os.getenv("HIGGSFIELD_API_BASE_URL", "https://api.higgsfield.ai")
+    HIGGSFIELD_TIMEOUT_SECONDS: float = float(os.getenv("HIGGSFIELD_TIMEOUT_SECONDS", "30"))
+    HIGGSFIELD_POLL_INTERVAL_SECONDS: float = float(os.getenv("HIGGSFIELD_POLL_INTERVAL_SECONDS", "2"))
+    HIGGSFIELD_MAX_POLL_SECONDS: int = int(os.getenv("HIGGSFIELD_MAX_POLL_SECONDS", "600"))
+
 settings = Settings()

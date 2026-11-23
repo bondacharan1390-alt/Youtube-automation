@@ -10,6 +10,8 @@ from app.services.video.video_composer import compose_video_async
 logger = logging.getLogger(__name__)
 
 class RenderJobService:
+    _background_tasks = set()
+
     @staticmethod
     async def start_render(
         project_id: str,
@@ -87,8 +89,20 @@ class RenderJobService:
             finally:
                 bg_db.close()
 
-        asyncio.create_task(_run())
+        task = asyncio.create_task(_run())
+        RenderJobService._background_tasks.add(task)
+        task.add_done_callback(RenderJobService._background_tasks.discard)
         return job
+
+    @classmethod
+    async def stop_background_tasks(cls) -> None:
+        """Cancel outstanding render tasks during application/test shutdown."""
+        tasks = [task for task in cls._background_tasks if not task.done()]
+        for task in tasks:
+            task.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+        cls._background_tasks.clear()
 
     @staticmethod
     def get_job_status(job_id: str, db: Session) -> dict:

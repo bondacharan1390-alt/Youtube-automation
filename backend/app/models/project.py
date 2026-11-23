@@ -98,6 +98,28 @@ class RenderJob(Base):
 
     project = relationship("Project", back_populates="render_jobs")
 
+
+class HiggsfieldGeneration(Base):
+    """Server-side record for an asynchronous Higgsfield request."""
+
+    __tablename__ = "higgsfield_generations"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=True, index=True)
+    scene_id = Column(String(36), nullable=True, index=True)
+    request_id = Column(String(255), nullable=False, unique=True, index=True)
+    model_path = Column(String(255), nullable=False)
+    operation = Column(String(50), nullable=False)
+    status = Column(String(50), nullable=False, default="queued", index=True)
+    status_url = Column(Text, nullable=True)
+    cancel_url = Column(Text, nullable=True)
+    output_url = Column(Text, nullable=True)
+    error_message = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    completed_at = Column(DateTime, nullable=True)
+
 class PublishJob(Base):
     __tablename__ = "publish_jobs"
 

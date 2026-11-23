@@ -7,13 +7,15 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import encrypt_secret, decrypt_secret
 from app.models.provider import AIProvider
+from app.models.user import User
 from app.schemas.provider import ProviderResponse, ProviderUpdate, HealthCheckResponse
 from app.api.v1.deps import get_current_user
+from app.core.config import settings
 
 router = APIRouter(prefix="/providers", tags=["AI Providers"])
 
 @router.get("", response_model=List[ProviderResponse])
-def list_providers(db: Session = Depends(get_db)):
+def list_providers(db: Session = Depends(get_db), _=Depends(get_current_user)):
     providers = db.query(AIProvider).order_by(AIProvider.category, AIProvider.name).all()
     result = []
     for p in providers:
@@ -39,8 +41,10 @@ def update_provider(
     provider_key: str,
     update_in: ProviderUpdate,
     db: Session = Depends(get_db),
-    _ = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Only administrators can change provider configuration")
     provider = db.query(AIProvider).filter(AIProvider.provider_key == provider_key).first()
     if not provider:
         raise HTTPException(status_code=404, detail="Provider not found")
@@ -48,6 +52,8 @@ def update_provider(
     if update_in.is_active is not None:
         provider.is_active = update_in.is_active
     if update_in.base_url is not None:
+        if provider_key == "higgsfield" and update_in.base_url.rstrip("/") != settings.HIGGSFIELD_API_BASE_URL.rstrip("/"):
+            raise HTTPException(status_code=400, detail="Higgsfield base URL is fixed to the official API endpoint")
         provider.base_url = update_in.base_url
     if update_in.settings_json is not None:
         provider.settings_json = update_in.settings_json
@@ -131,6 +137,13 @@ def check_provider_health(
     elif provider_key == "faster_whisper":
         is_healthy = True
         message = "faster-whisper CTranslate2 INT8 model engine ready"
+
+    # Higgsfield intentionally does not submit a generation to test connectivity.
+    # A saved key is not proof of validity and a generation may consume credits.
+    elif provider_key == "higgsfield":
+        has_key = bool(provider.encrypted_api_key)
+        is_healthy = False
+        message = "API key configured; live generation check disabled to avoid credit usage" if has_key else "API key not configured"
 
     # Cloud providers (Gemini, ElevenLabs, YouTube)
     elif provider_key in ["gemini", "elevenlabs", "youtube"]:

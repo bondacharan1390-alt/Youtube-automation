@@ -111,6 +111,21 @@ def seed_initial_data(db: Session):
             "is_active": True,
             "is_healthy": False,
             "health_status_message": "Awaiting Channel Link"
+        },
+        {
+            "provider_key": "higgsfield",
+            "name": "Higgsfield AI (Cloud Image/Video)",
+            "category": "media",
+            "execution_mode": "cloud",
+            "base_url": "https://api.higgsfield.ai",
+            "settings_json": {
+                "model_path": "kling-video/v4.0/image-to-video",
+                "operation": "image_to_video",
+                "credential_format": "complete_key_or_key_id_secret"
+            },
+            "is_active": False,
+            "is_healthy": False,
+            "health_status_message": "API key required; no live check performed"
         }
     ]
 
@@ -236,6 +251,8 @@ async def lifespan(app: FastAPI):
     from app.services.automation_service import AutomationService
     AutomationService.start_worker()
     yield
+    from app.services.video.render_job import RenderJobService
+    await RenderJobService.stop_background_tasks()
     await AutomationService.stop_worker()
 
 app = FastAPI(
