@@ -84,7 +84,7 @@ def generate_thumbnail(
     return ThumbnailResponse(**result)
 
 
-@router.get("/{project_id}", response_model=ThumbnailResponse)
+@router.get("/{project_id}", response_model=Optional[ThumbnailResponse])
 def get_thumbnail(
     project_id: str,
     db: Session = Depends(get_db),
@@ -96,7 +96,7 @@ def get_thumbnail(
 
     thumbnail_path = os.path.join(STORAGE_DIR, "thumbnails", f"{project_id}.png")
     if not os.path.exists(thumbnail_path):
-        raise HTTPException(status_code=404, detail="Thumbnail not yet generated for this project")
+        return None
 
     file_size = os.path.getsize(thumbnail_path)
     aspect_ratio = project.aspect_ratio or "16:9"

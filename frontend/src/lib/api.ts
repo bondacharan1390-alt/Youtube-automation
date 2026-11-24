@@ -53,7 +53,7 @@ export async function fetchApi<T>(
 
     return await response.json();
   } catch (err: unknown) {
-    if (!(err instanceof ApiError && err.status === 401)) {
+    if (!(err instanceof ApiError && (err.status === 401 || err.status === 404))) {
       console.error(`API Error on ${endpoint}:`, err);
     }
     throw err;

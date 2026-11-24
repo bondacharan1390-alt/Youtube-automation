@@ -26,3 +26,7 @@ backend/storage/
 *.log
 .DS_Store
 Thumbs.db
+
+# Nested clones or temporary test directories
+Youtube-automation/
+

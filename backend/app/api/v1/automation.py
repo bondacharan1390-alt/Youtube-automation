@@ -281,3 +281,10 @@ def list_notifications(
         "read": n.read,
         "created_at": n.created_at.isoformat() if n.created_at else None,
     } for n in items]
+
+
+@router.get("/hardware/status")
+def get_hardware_status():
+    from app.services.hardware_queue import HardwareTaskQueue
+    return HardwareTaskQueue.get_hardware_status()
+
