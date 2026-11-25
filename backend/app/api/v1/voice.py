@@ -56,6 +56,7 @@ async def synthesize_all_scenes(
             voice_id=req.voice_id,
             speed=req.speed,
             pitch=req.pitch,
+            output_format=req.output_format,
             db=db,
         )
         return res

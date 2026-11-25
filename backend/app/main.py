@@ -380,7 +380,11 @@ def download_private_storage(
         media_type = "application/x-subrip"
     elif filename.lower().endswith(".vtt"):
         media_type = "text/vtt"
-    return FileResponse(path=file_path, media_type=media_type, filename=filename)
+    return FileResponse(
+        path=file_path,
+        media_type=media_type,
+        headers={"Content-Disposition": f"inline; filename=\"{filename}\""},
+    )
 
 @app.get("/health")
 def health_check():

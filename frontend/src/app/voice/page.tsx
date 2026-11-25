@@ -143,6 +143,7 @@ export default function VoiceStudioPage() {
           voice_id: selectedVoice,
           speed,
           pitch,
+          output_format: audioFormat,
         }),
       });
 

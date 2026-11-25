@@ -24,6 +24,8 @@ class SceneUpdate(BaseModel):
 class SceneResponse(SceneBase):
     id: str
     project_id: str
+    voice_asset_id: Optional[str] = None
+    audio_url: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)

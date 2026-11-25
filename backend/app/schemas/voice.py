@@ -25,8 +25,11 @@ class VoiceSynthesizeResponse(BaseModel):
     voice_id: str
     speed: float
     pitch: float
+    mime_type: Optional[str] = None
+    audio_format: Optional[str] = None
 
 class VoiceProjectSynthesizeRequest(BaseModel):
     voice_id: str = "te-IN-MohanNeural"
     speed: float = Field(default=1.0, ge=0.5, le=2.0)
     pitch: float = Field(default=0.0, ge=-50.0, le=50.0)
+    output_format: str = Field(default="mp3", pattern="^(mp3|wav)$")

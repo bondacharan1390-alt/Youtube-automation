@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.user import User
-from app.models.project import Project, Scene
+from app.models.project import Asset, Project, Scene
 from app.schemas.project import (
     ProjectCreate, ProjectUpdate, ProjectResponse, ProjectDetailResponse,
     SceneCreate, SceneUpdate, SceneResponse
@@ -11,6 +11,15 @@ from app.schemas.project import (
 from app.api.v1.deps import get_current_user
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
+
+
+def _scene_response(scene: Scene, db: Session) -> SceneResponse:
+    response = SceneResponse.model_validate(scene)
+    if scene.voice_asset_id:
+        asset = db.query(Asset).filter(Asset.id == scene.voice_asset_id, Asset.asset_type == "audio").first()
+        if asset:
+            response.audio_url = f"/storage/audio/{asset.file_name}"
+    return response
 
 @router.get("", response_model=List[ProjectResponse])
 def list_projects(
@@ -83,6 +92,7 @@ def create_project(
     db.refresh(project)
     
     resp = ProjectDetailResponse.model_validate(project)
+    resp.scenes = [_scene_response(scene, db) for scene in project.scenes]
     resp.scenes_count = len(project.scenes)
     return resp
 
@@ -97,6 +107,7 @@ def get_project(
         raise HTTPException(status_code=404, detail="Project not found")
     
     resp = ProjectDetailResponse.model_validate(project)
+    resp.scenes = [_scene_response(scene, db) for scene in project.scenes]
     resp.scenes_count = len(project.scenes)
     return resp
 
@@ -160,4 +171,4 @@ def add_scene(
     db.add(scene)
     db.commit()
     db.refresh(scene)
-    return SceneResponse.model_validate(scene)
+    return _scene_response(scene, db)
