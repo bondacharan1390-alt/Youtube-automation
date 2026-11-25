@@ -10,6 +10,31 @@ class ApiError extends Error {
   }
 }
 
+function extractErrorMessage(detail: unknown, status: number): string {
+  if (typeof detail === "string") {
+    return detail;
+  }
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        if (typeof item === "string") return item;
+        if (item && typeof item === "object") {
+          const loc = Array.isArray((item as any).loc)
+            ? (item as any).loc.filter((p: any) => p !== "body").join(".")
+            : "";
+          const msg = (item as any).msg || (item as any).message || JSON.stringify(item);
+          return loc ? `${loc}: ${msg}` : msg;
+        }
+        return String(item);
+      })
+      .join("; ");
+  }
+  if (detail && typeof detail === "object") {
+    return (detail as any).msg || (detail as any).message || JSON.stringify(detail);
+  }
+  return `Request failed with status ${status}`;
+}
+
 export async function fetchApi<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -41,10 +66,8 @@ export async function fetchApi<T>(
           }
         }
       }
-      throw new ApiError(
-        errorData.detail || `Request failed with status ${response.status}`,
-        response.status
-      );
+      const message = extractErrorMessage(errorData.detail, response.status);
+      throw new ApiError(message, response.status);
     }
 
     if (response.status === 204) {
@@ -53,8 +76,10 @@ export async function fetchApi<T>(
 
     return await response.json();
   } catch (err: unknown) {
-    if (!(err instanceof ApiError && (err.status === 401 || err.status === 404))) {
+    if (!(err instanceof ApiError && err.status < 500)) {
       console.error(`API Error on ${endpoint}:`, err);
+    } else {
+      console.warn(`API Warning on ${endpoint} (${(err as ApiError).status}):`, (err as ApiError).message);
     }
     throw err;
   }

@@ -39,12 +39,12 @@ export const CreateProjectModal: React.FC = () => {
       const created = await fetchApi<any>("/projects", {
         method: "POST",
         body: JSON.stringify({
-          title,
-          topic,
+          title: title.trim(),
+          topic: topic.trim() || undefined,
           language,
           aspect_ratio: aspectRatio,
           target_resolution: targetResolution,
-          target_scene_count: targetSceneCount,
+          target_scene_count: Number(targetSceneCount) || 5,
         }),
       });
 
