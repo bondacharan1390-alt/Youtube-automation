@@ -39,12 +39,20 @@ class HardwareTaskQueue:
     Sequential Hardware Guard for Windows 11 with 8 GB RAM baseline.
     Ensures heavy tasks (Voice synthesis, Stable Diffusion image rendering, Video encoding)
     never run concurrently to prevent RAM exhaustion and GPU VRAM collisions.
+    Supports re-entrant execution for nested task hierarchies.
     """
     _lock = asyncio.Lock()
+    _owner_task: Any = None
 
     @classmethod
     async def run_sequential(cls, task_name: str, coroutine):
+        current = asyncio.current_task()
+        if cls._owner_task is not None and cls._owner_task == current:
+            # Re-entrant call from within the same asyncio task hierarchy
+            return await coroutine
+
         async with cls._lock:
+            cls._owner_task = current
             # 1. Hardware memory check before running task
             total_ram, free_ram = get_system_ram_gb()
             logger.info(f"Executing '{task_name}' - RAM: {free_ram} GB free / {total_ram} GB total")
@@ -57,6 +65,7 @@ class HardwareTaskQueue:
                 result = await coroutine
                 return result
             finally:
+                cls._owner_task = None
                 # Immediate memory cleanup after each heavy task
                 gc.collect()
 

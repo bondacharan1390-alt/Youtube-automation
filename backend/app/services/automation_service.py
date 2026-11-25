@@ -715,10 +715,7 @@ class AutomationService:
             }
             timeout_seconds = task_timeouts.get(task.task_key, 120.0)
             output = await asyncio.wait_for(
-                HardwareTaskQueue.run_sequential(
-                    f"{workflow.name}:{task.task_key}",
-                    AutomationService.execute_task(task, workflow, project, db),
-                ),
+                AutomationService.execute_task(task, workflow, project, db),
                 timeout=timeout_seconds,
             )
             job.status = "completed"
