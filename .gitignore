@@ -19,6 +19,7 @@ coverage/
 *.sqlite
 *.sqlite3
 backups/
+backup_*/
 
 storage/
 backend/storage/

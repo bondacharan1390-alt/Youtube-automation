@@ -14,7 +14,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { useTranslation } from "@/lib/i18n";
-import { fetchApi } from "@/lib/api";
+import { fetchApi, getMediaUrl } from "@/lib/api";
 
 interface ProjectItem {
   id: string;
@@ -241,7 +241,7 @@ export default function ThumbnailStudioPage() {
                 }`}
               >
                 <img
-                  src={`${API_BASE}${thumbnailData.thumbnail_url}?t=${Date.now()}`}
+                  src={getMediaUrl(thumbnailData.thumbnail_url)}
                   alt="Generated YouTube Thumbnail"
                   className="w-full h-full object-cover"
                 />

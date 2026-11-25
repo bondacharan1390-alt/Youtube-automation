@@ -19,7 +19,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { useTranslation } from "@/lib/i18n";
-import { fetchApi } from "@/lib/api";
+import { fetchApi, getMediaUrl } from "@/lib/api";
 
 interface VoiceItem {
   id: string;
@@ -397,11 +397,11 @@ export default function VoiceStudioPage() {
                   <div className="flex items-center space-x-3 w-full sm:w-auto">
                     <audio
                       controls
-                      src={`http://localhost:8000${scene.audio_url}`}
+                      src={getMediaUrl(scene.audio_url)}
                       className="h-9 w-full sm:w-80"
                     />
                     <a
-                      href={`http://localhost:8000${scene.audio_url}`}
+                      href={getMediaUrl(scene.audio_url)}
                       download={`scene_${scene.scene_order}.${audioFormat}`}
                       className="p-2 rounded-lg bg-slate-100 dark:bg-studio-800 text-slate-600 dark:text-slate-300 hover:text-red-600 transition-colors"
                       title="Download Audio File"

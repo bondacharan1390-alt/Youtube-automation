@@ -84,3 +84,17 @@ export async function fetchApi<T>(
     throw err;
   }
 }
+
+/**
+ * Resolves a storage or API media path into a fully qualified, authenticated URL.
+ * Automatically appends the user's active session token for <img> and <video> elements.
+ */
+export function getMediaUrl(path: string | null | undefined): string {
+  if (!path) return "";
+  const token = typeof window !== "undefined" ? localStorage.getItem("studio_token") : null;
+  const apiHost = process.env.NEXT_PUBLIC_API_URL?.replace("/api/v1", "") || "http://localhost:8000";
+  const base = path.startsWith("http") ? path : `${apiHost}${path.startsWith("/") ? "" : "/"}${path}`;
+  if (!token) return base;
+  const separator = base.includes("?") ? "&" : "?";
+  return `${base}${separator}token=${encodeURIComponent(token)}`;
+}

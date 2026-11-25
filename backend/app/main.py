@@ -1,6 +1,7 @@
 import os
 import time
 import threading
+from typing import Optional
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -295,17 +296,54 @@ app.add_middleware(
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Query
+
+storage_security = HTTPBearer(auto_error=False)
+
+def get_user_from_auth_or_query_token(
+    token: Optional[str] = Query(None),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(storage_security),
+    db: Session = Depends(get_db),
+):
+    raw_token = None
+    if credentials and credentials.credentials:
+        raw_token = credentials.credentials
+    elif token:
+        raw_token = token
+
+    if not raw_token:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    from app.core.security import decode_access_token
+    payload = decode_access_token(raw_token)
+    if not payload or "sub" not in payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    user = db.query(User).filter(User.id == payload["sub"]).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not user.is_active:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    return user
+
 storage_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../storage"))
 os.makedirs(os.path.join(storage_path, "audio"), exist_ok=True)
 os.makedirs(os.path.join(storage_path, "images"), exist_ok=True)
 os.makedirs(os.path.join(storage_path, "subtitles"), exist_ok=True)
 os.makedirs(os.path.join(storage_path, "renders"), exist_ok=True)
+os.makedirs(os.path.join(storage_path, "thumbnails"), exist_ok=True)
+
 @app.get("/storage/{asset_type}/{filename}")
 def download_private_storage(
     asset_type: str,
     filename: str,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(get_user_from_auth_or_query_token),
 ):
     from app.models.project import Asset, Project
     if asset_type not in ("audio", "images", "subtitles", "renders", "thumbnails"):
@@ -321,13 +359,13 @@ def download_private_storage(
 
     asset = db.query(Asset).filter(Asset.file_name == filename).first()
     if asset:
-        project = db.query(Project).filter(Project.id == asset.project_id, Project.user_id == current_user.id).first()
-        if not project:
+        project = db.query(Project).filter(Project.id == asset.project_id).first()
+        if not project or (not current_user.is_superuser and project.user_id != current_user.id):
             raise HTTPException(status_code=404, detail="Asset not found")
     else:
         stem = os.path.splitext(filename)[0]
-        project = db.query(Project).filter(Project.id == stem, Project.user_id == current_user.id).first()
-        if not project:
+        project = db.query(Project).filter(Project.id == stem).first()
+        if not project or (not current_user.is_superuser and project.user_id != current_user.id):
             raise HTTPException(status_code=404, detail="Asset not found")
     media_type = "application/octet-stream"
     if filename.lower().endswith(".mp4"):

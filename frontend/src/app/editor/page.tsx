@@ -17,7 +17,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { useTranslation } from "@/lib/i18n";
-import { fetchApi } from "@/lib/api";
+import { fetchApi, getMediaUrl } from "@/lib/api";
 
 interface ProjectItem {
   id: string;
@@ -264,7 +264,7 @@ export default function EditorPage() {
                     >
                       {scene.image_url ? (
                         <img
-                          src={scene.image_url}
+                          src={getMediaUrl(scene.image_url)}
                           alt={`Scene ${scene.scene_order}`}
                           className="w-full h-full object-cover"
                         />
@@ -374,17 +374,21 @@ export default function EditorPage() {
                   </div>
                   {renderStatus.status === "completed" &&
                     renderStatus.output_url && (
-                      <a
-                        href={`${
-                          process.env.NEXT_PUBLIC_API_URL ||
-                          "http://localhost:8000"
-                        }${renderStatus.output_url}`}
-                        download
-                        className="inline-flex items-center gap-2 text-sm text-green-600 dark:text-green-400 font-medium hover:underline"
-                      >
-                        <Download className="w-4 h-4" />
-                        {t.editorStudio.downloadMp4}
-                      </a>
+                      <div className="space-y-3 pt-2">
+                        <video
+                          controls
+                          className="w-full rounded-lg border border-slate-700 bg-black aspect-video"
+                          src={getMediaUrl(renderStatus.output_url)}
+                        />
+                        <a
+                          href={getMediaUrl(renderStatus.output_url)}
+                          download
+                          className="inline-flex items-center gap-2 text-sm text-green-600 dark:text-green-400 font-medium hover:underline"
+                        >
+                          <Download className="w-4 h-4" />
+                          {t.editorStudio.downloadMp4}
+                        </a>
+                      </div>
                     )}
                   {renderStatus.status === "failed" && (
                     <p className="text-xs text-red-500 flex items-center gap-1">
@@ -412,7 +416,7 @@ export default function EditorPage() {
                     </p>
                     {selectedScene.image_url && (
                       <img
-                        src={selectedScene.image_url}
+                        src={getMediaUrl(selectedScene.image_url)}
                         alt="Scene preview"
                         className={`rounded-lg object-cover mb-3 ${
                           isPortrait ? "h-32 w-20" : "w-full h-24"

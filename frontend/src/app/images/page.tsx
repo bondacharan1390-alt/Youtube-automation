@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { useTranslation } from "@/lib/i18n";
-import { fetchApi } from "@/lib/api";
+import { fetchApi, getMediaUrl } from "@/lib/api";
 
 interface SceneItem {
   id: string;
@@ -44,8 +44,8 @@ export default function ImageStudioPage() {
   const [scenes, setScenes] = useState<SceneItem[]>([]);
   const [aspectRatio, setAspectRatio] = useState<string>("16:9");
 
-  // Character Consistency & Prompt Settings
-  const [characterTokens, setCharacterTokens] = useState<string>("Alex, male Indian tech creator, smart glasses, black hoodie");
+  // Character Consistency & Prompt Settings (Arjun)
+  const [characterTokens, setCharacterTokens] = useState<string>("Arjun, 25-year-old Indian male, oval face, dark brown eyes, short black hair, black futuristic jacket with glowing blue lines");
   const [negativePrompt, setNegativePrompt] = useState<string>("blurry, deformed, bad anatomy, text watermark, low quality");
 
   // Loading States
@@ -312,7 +312,7 @@ export default function ImageStudioPage() {
                 >
                   {scene.image_url ? (
                     <img
-                      src={`http://localhost:8000${scene.image_url}`}
+                      src={getMediaUrl(scene.image_url)}
                       alt={`Scene ${scene.scene_order}`}
                       className="w-full h-full object-cover"
                     />
@@ -335,7 +335,7 @@ export default function ImageStudioPage() {
               <div className="pt-2 border-t border-slate-100 dark:border-studio-800 flex items-center justify-between gap-2">
                 {scene.image_url ? (
                   <a
-                    href={`http://localhost:8000${scene.image_url}`}
+                    href={getMediaUrl(scene.image_url)}
                     download={`scene_${scene.scene_order}.png`}
                     className="p-1.5 rounded-lg bg-slate-100 dark:bg-studio-800 text-slate-600 dark:text-slate-300 hover:text-red-600 transition-colors flex items-center space-x-1 text-xs"
                     title="Download Frame PNG"

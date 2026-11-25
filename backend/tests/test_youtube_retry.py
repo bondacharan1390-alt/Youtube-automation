@@ -86,13 +86,18 @@ def test_thumbnail_attachment_api():
     if not projects:
         pytest.skip("No projects available")
 
-    # Create dummy thumbnail file if needed
+    # Create dummy thumbnail file if needed with valid 1x1 PNG bytes
     storage_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../storage/thumbnails"))
     os.makedirs(storage_dir, exist_ok=True)
     thumb_path = os.path.join(storage_dir, f"{projects[0]['id']}.png")
     if not os.path.exists(thumb_path):
+        # Valid 1x1 RGBA PNG
+        valid_png = (
+            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4"
+            b"\x00\x00\x00\rIDATx\x9cc`\x00\x00\x00\x02\x00\x01H\xaf\xa4q\x00\x00\x00\x00IEND\xaeB`\x82"
+        )
         with open(thumb_path, "wb") as f:
-            f.write(b"\x89PNG\r\n\x1a\n" + b"\x00" * 100)
+            f.write(valid_png)
 
     r = client.post(
         "/api/v1/youtube/thumbnails/attach",
